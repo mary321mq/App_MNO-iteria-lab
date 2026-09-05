@@ -59,6 +59,61 @@ const methodOrder: MethodId[] = [
   "bairstow",
 ];
 
+const methodCards: Record<
+  MethodId,
+  { symbol: string; formula: string; hint: string; fields: string; accent: string }
+> = {
+  bisection: {
+    symbol: "1/2",
+    formula: "c=(a+b)/2",
+    hint: "Seguro cuando hay cambio de signo.",
+    fields: "a, b",
+    accent: "cyan",
+  },
+  "false-position": {
+    symbol: "alpha",
+    formula: "xr por recta",
+    hint: "Cerrado, pero usa interpolacion.",
+    fields: "a, b",
+    accent: "blue",
+  },
+  "fixed-point": {
+    symbol: "g(x)",
+    formula: "x=g(x)",
+    hint: "Compara formulas y convergencia.",
+    fields: "g(x), x0",
+    accent: "violet",
+  },
+  newton: {
+    symbol: "N",
+    formula: "tangente",
+    hint: "Rapido si el punto inicial es bueno.",
+    fields: "x0, f'(x)",
+    accent: "emerald",
+  },
+  secant: {
+    symbol: "S",
+    formula: "dos puntos",
+    hint: "Como Newton, sin derivada.",
+    fields: "x0, x1",
+    accent: "amber",
+  },
+  muller: {
+    symbol: "M",
+    formula: "parabola",
+    hint: "Puede encontrar raices complejas.",
+    fields: "x0, x1, x2",
+    accent: "pink",
+  },
+  bairstow: {
+    symbol: "B",
+    formula: "polinomios",
+    hint: "Factores cuadraticos y raices.",
+    fields: "coef, r, s",
+    accent: "slate",
+  },
+};
+
 function App() {
   const [expression, setExpression] = useState("exp(-x)+sin(x)-x^2");
   const [config, setConfig] = useState<MethodConfig>(defaultConfig);
@@ -160,10 +215,14 @@ function App() {
             <Sigma size={26} />
           </div>
           <div>
-            <span className="eyebrow">Laboratorio Octave</span>
-            <h1>Raices Numericas</h1>
-            <p>Grafica, estima y resuelve ejercicios paso a paso.</p>
+            <span className="eyebrow">Anime x Octave</span>
+            <h1>MaryLab Numerico</h1>
+            <p>Raices, graficas y tablas listas para estudiar.</p>
           </div>
+        </div>
+        <div className="anime-hero" aria-hidden="true">
+          <div className="formula-ribbon">f(x)=0</div>
+          <img src="/anime-math-guide.png" alt="" />
         </div>
         <button className="theme-toggle" type="button" onClick={() => setDarkMode((value) => !value)}>
           {darkMode ? <Sun size={18} /> : <Moon size={18} />}
@@ -255,16 +314,29 @@ function App() {
           </section>
 
           <section className="panel">
-            <h2>Metodo numerico</h2>
-            <div className="method-grid">
+            <div className="section-title-row">
+              <div>
+                <h2>Metodo numerico</h2>
+                <p>Elige segun el tipo de ejercicio y sus datos iniciales.</p>
+              </div>
+            </div>
+            <div className="method-grid method-card-grid">
               {methodOrder.map((method) => (
                 <button
                   key={method}
                   type="button"
-                  className={config.method === method ? "active" : ""}
+                  className={`method-card method-${methodCards[method].accent} ${
+                    config.method === method ? "active" : ""
+                  }`}
                   onClick={() => updateConfig("method", method)}
                 >
-                  {methodNames[method]}
+                  <span className="method-symbol">{methodCards[method].symbol}</span>
+                  <span className="method-copy">
+                    <strong>{methodNames[method]}</strong>
+                    <small>{methodCards[method].formula}</small>
+                    <em>{methodCards[method].hint}</em>
+                  </span>
+                  <span className="method-fields">{methodCards[method].fields}</span>
                 </button>
               ))}
             </div>
