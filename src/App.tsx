@@ -1,4 +1,4 @@
-import { Calculator, History, Keyboard, Moon, Sigma, Sun, Trash2 } from "lucide-react";
+import { Calculator, History, Keyboard, Moon, Sun, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FunctionGraph } from "./components/FunctionGraph";
 import { IterationTable } from "./components/IterationTable";
@@ -59,58 +59,41 @@ const methodOrder: MethodId[] = [
   "bairstow",
 ];
 
-const methodCards: Record<
-  MethodId,
-  { symbol: string; formula: string; hint: string; fields: string; accent: string }
-> = {
+const methodCards: Record<MethodId, { formula: string; hint: string; fields: string }> = {
   bisection: {
-    symbol: "1/2",
     formula: "c=(a+b)/2",
     hint: "Seguro cuando hay cambio de signo.",
     fields: "a, b",
-    accent: "cyan",
   },
   "false-position": {
-    symbol: "alpha",
     formula: "xr por recta",
     hint: "Cerrado, pero usa interpolacion.",
     fields: "a, b",
-    accent: "blue",
   },
   "fixed-point": {
-    symbol: "g(x)",
     formula: "x=g(x)",
     hint: "Compara formulas y convergencia.",
     fields: "g(x), x0",
-    accent: "violet",
   },
   newton: {
-    symbol: "N",
     formula: "tangente",
     hint: "Rapido si el punto inicial es bueno.",
     fields: "x0, f'(x)",
-    accent: "emerald",
   },
   secant: {
-    symbol: "S",
     formula: "dos puntos",
     hint: "Como Newton, sin derivada.",
     fields: "x0, x1",
-    accent: "amber",
   },
   muller: {
-    symbol: "M",
     formula: "parabola",
     hint: "Puede encontrar raices complejas.",
     fields: "x0, x1, x2",
-    accent: "pink",
   },
   bairstow: {
-    symbol: "B",
     formula: "polinomios",
     hint: "Factores cuadraticos y raices.",
     fields: "coef, r, s",
-    accent: "slate",
   },
 };
 
@@ -118,7 +101,8 @@ function App() {
   const [expression, setExpression] = useState("exp(-x)+sin(x)-x^2");
   const [config, setConfig] = useState<MethodConfig>(defaultConfig);
   const [range, setRange] = useState({ min: -5, max: 5 });
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
+  const [showSplash, setShowSplash] = useState(true);
   const [selectedPoints, setSelectedPoints] = useState<PointSelection[]>([]);
   const [result, setResult] = useState<SolveResult | null>(null);
   const [message, setMessage] = useState("");
@@ -132,6 +116,11 @@ function App() {
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setShowSplash(false), 2100);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const validation = useMemo(() => {
     try {
@@ -207,22 +196,38 @@ function App() {
   const negativeIntervals = intervals.filter((item) => item.kind === "negative");
   const positiveIntervals = intervals.filter((item) => item.kind === "positive");
 
+  if (showSplash) {
+    return (
+      <main className="splash-screen">
+        <section className="splash-card" aria-label="Bienvenida a MaryLab">
+          <div className="splash-image">
+            <img src="/anime-math-guide.png" alt="" />
+          </div>
+          <div className="splash-copy">
+            <span>Laboratorio de convergencia</span>
+            <h1>Bienvenida a MaryLab</h1>
+            <p>Raices numericas, paso a paso.</p>
+            <small>Preparando graficas, metodos y tablas...</small>
+            <div className="loading-track" aria-hidden="true">
+              <div className="loading-bar" />
+            </div>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   return (
     <main className="app-shell">
       <header className="topbar">
-        <div className="brand-block">
-          <div className="brand-mark">
-            <Sigma size={26} />
-          </div>
-          <div>
-            <span className="eyebrow">Anime x Octave</span>
-            <h1>MaryLab Numerico</h1>
-            <p>Raices, graficas y tablas listas para estudiar.</p>
-          </div>
-        </div>
         <div className="anime-hero" aria-hidden="true">
-          <div className="formula-ribbon">f(x)=0</div>
           <img src="/anime-math-guide.png" alt="" />
+        </div>
+        <div className="brand-block brand-centered">
+          <span className="eyebrow">Laboratorio de convergencia</span>
+          <h1>MaryLab</h1>
+          <p className="lead-line">Raices numericas, paso a paso.</p>
+          <p>Explora funciones, encuentra raices y sigue cada iteracion hasta la solucion.</p>
         </div>
         <button className="theme-toggle" type="button" onClick={() => setDarkMode((value) => !value)}>
           {darkMode ? <Sun size={18} /> : <Moon size={18} />}
@@ -320,25 +325,25 @@ function App() {
                 <p>Elige segun el tipo de ejercicio y sus datos iniciales.</p>
               </div>
             </div>
-            <div className="method-grid method-card-grid">
+            <div className="method-selector" role="list" aria-label="Seleccion de metodo">
               {methodOrder.map((method) => (
                 <button
                   key={method}
                   type="button"
-                  className={`method-card method-${methodCards[method].accent} ${
-                    config.method === method ? "active" : ""
-                  }`}
+                  className={`method-pill ${config.method === method ? "active" : ""}`}
                   onClick={() => updateConfig("method", method)}
                 >
-                  <span className="method-symbol">{methodCards[method].symbol}</span>
-                  <span className="method-copy">
-                    <strong>{methodNames[method]}</strong>
-                    <small>{methodCards[method].formula}</small>
-                    <em>{methodCards[method].hint}</em>
-                  </span>
-                  <span className="method-fields">{methodCards[method].fields}</span>
+                  <strong>{methodNames[method]}</strong>
+                  <small>{methodCards[method].fields}</small>
                 </button>
               ))}
+            </div>
+            <div className="method-detail">
+              <div>
+                <span>{methodNames[config.method]}</span>
+                <strong>{methodCards[config.method].formula}</strong>
+              </div>
+              <p>{methodCards[config.method].hint}</p>
             </div>
             <div className="field-grid two">
               <label>
