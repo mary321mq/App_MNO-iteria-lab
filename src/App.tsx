@@ -1,5 +1,5 @@
-import { Calculator, History, Moon, Sun, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Calculator, History, Keyboard, Moon, Sigma, Sun, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FunctionGraph } from "./components/FunctionGraph";
 import { IterationTable } from "./components/IterationTable";
 import { ResultCard } from "./components/ResultCard";
@@ -12,13 +12,23 @@ import { methodNames, solveMethod } from "./methods";
 import { clearHistory, deleteHistoryEntry, readHistory, saveHistoryEntry } from "./storage/history";
 import { HistoryEntry, MethodConfig, MethodId, PointSelection, SolveResult } from "./types/numerical";
 
-const examples = [
-  "exp(-x)+sin(x)-x^2",
-  "x^3+2*x^2+10*x-20",
-  "x-tan(x)",
-  "x^4-2*x^3-4*x^2-4*x-4",
-  "exp(-x)*cos(8*x)",
-  "x+log(x)",
+const mathTemplates = [
+  { label: "x", value: "x" },
+  { label: "x^2", value: "x^2" },
+  { label: "x^3", value: "x^3" },
+  { label: "x^4", value: "x^4" },
+  { label: "sin", value: "sin(x)" },
+  { label: "cos", value: "cos(x)" },
+  { label: "tan", value: "tan(x)" },
+  { label: "exp", value: "exp(x)" },
+  { label: "log", value: "log(x)" },
+  { label: "sqrt", value: "sqrt(x)" },
+  { label: "pi", value: "pi" },
+  { label: "( )", value: "()" },
+  { label: "+", value: "+" },
+  { label: "-", value: "-" },
+  { label: "*", value: "*" },
+  { label: "/", value: "/" },
 ];
 
 const defaultConfig: MethodConfig = {
@@ -58,6 +68,7 @@ function App() {
   const [result, setResult] = useState<SolveResult | null>(null);
   const [message, setMessage] = useState("");
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const expressionRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     setHistory(readHistory());
@@ -88,6 +99,24 @@ function App() {
 
   const updateConfig = <K extends keyof MethodConfig>(key: K, value: MethodConfig[K]) => {
     setConfig((current) => ({ ...current, [key]: value }));
+  };
+
+  const insertTemplate = (value: string) => {
+    const input = expressionRef.current;
+    if (!input) {
+      setExpression((current) => `${current}${value}`);
+      return;
+    }
+
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const next = `${expression.slice(0, start)}${value}${expression.slice(end)}`;
+    const cursorOffset = value === "()" ? 1 : value.endsWith("(x)") ? value.length - 2 : value.length;
+    setExpression(next);
+    requestAnimationFrame(() => {
+      input.focus();
+      input.setSelectionRange(start + cursorOffset, start + cursorOffset);
+    });
   };
 
   const setPoint = (point: PointSelection, target: "a" | "b" | "x0" | "x1" | "x2") => {
@@ -126,9 +155,15 @@ function App() {
   return (
     <main className="app-shell">
       <header className="topbar">
-        <div>
-          <span className="eyebrow">U1 - Metodos de raices</span>
-          <h1>Metodos Numericos con Octave</h1>
+        <div className="brand-block">
+          <div className="brand-mark">
+            <Sigma size={26} />
+          </div>
+          <div>
+            <span className="eyebrow">Laboratorio Octave</span>
+            <h1>Raices Numericas</h1>
+            <p>Grafica, estima y resuelve ejercicios paso a paso.</p>
+          </div>
         </div>
         <button className="theme-toggle" type="button" onClick={() => setDarkMode((value) => !value)}>
           {darkMode ? <Sun size={18} /> : <Moon size={18} />}
@@ -150,9 +185,23 @@ function App() {
               onChange={(event) => setExpression(event.target.value)}
               spellCheck={false}
               className="function-input"
+              ref={expressionRef}
             />
-            <div className="example-list">
-              {examples.map((item) => (
+            <div className="math-pad">
+              <div className="math-pad-title">
+                <Keyboard size={16} />
+                Atajos matematicos
+              </div>
+              <div className="symbol-grid">
+                {mathTemplates.map((item) => (
+                  <button key={item.label} type="button" onClick={() => insertTemplate(item.value)}>
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="quick-presets">
+              {["exp(-x)+sin(x)-x^2", "x-tan(x)", "x+log(x)"].map((item) => (
                 <button key={item} type="button" onClick={() => setExpression(item)}>
                   {item}
                 </button>
