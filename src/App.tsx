@@ -199,13 +199,13 @@ function App() {
   if (showSplash) {
     return (
       <main className="splash-screen">
-        <section className="splash-card" aria-label="Bienvenida a MaryLab">
+        <section className="splash-card" aria-label="Bienvenida a NumiLab">
           <div className="splash-image">
             <img src="/anime-math-guide.png" alt="" />
           </div>
           <div className="splash-copy">
             <span>Laboratorio de convergencia</span>
-            <h1>Bienvenida a MaryLab</h1>
+            <h1>Bienvenida a NumiLab</h1>
             <p>Raices numericas, paso a paso.</p>
             <small>Preparando graficas, metodos y tablas...</small>
             <div className="loading-track" aria-hidden="true">
@@ -225,7 +225,7 @@ function App() {
         </div>
         <div className="brand-block brand-centered">
           <span className="eyebrow">Laboratorio de convergencia</span>
-          <h1>MaryLab</h1>
+          <h1>NumiLab</h1>
           <p className="lead-line">Raices numericas, paso a paso.</p>
           <p>Explora funciones, encuentra raices y sigue cada iteracion hasta la solucion.</p>
         </div>
