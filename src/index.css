@@ -497,6 +497,17 @@ label {
   color: #d7e5f6;
 }
 
+.field-help {
+  color: #607089;
+  font-size: 0.82rem;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.dark .field-help {
+  color: #a9bad2;
+}
+
 .math-pad,
 .quick-presets,
 .exam-tools,

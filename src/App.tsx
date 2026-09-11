@@ -370,11 +370,15 @@ function App() {
                 value={config.stopCriterion}
                 onChange={(event) => updateConfig("stopCriterion", event.target.value as MethodConfig["stopCriterion"])}
               >
-                <option value="teacher">Docente por defecto</option>
+                <option value="teacher">Recomendado por el metodo</option>
                 <option value="approx-percent">Error aproximado porcentual</option>
                 <option value="function-abs">Valor absoluto de f(x)</option>
                 <option value="iterations">Numero maximo de iteraciones</option>
               </select>
+              <span className="field-help">
+                Usa la regla mas comun para cada metodo. Por ejemplo, biseccion revisa el tamano del intervalo y
+                regla falsa revisa que f(x) sea pequeno.
+              </span>
             </label>
             <DynamicFields config={config} updateConfig={updateConfig} convergence={convergence} />
             <button className="solve-button" type="button" onClick={solve}>
