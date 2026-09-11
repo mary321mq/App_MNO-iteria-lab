@@ -925,6 +925,81 @@ label {
   height: 460px;
 }
 
+.graph-insights {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.graph-insight-card {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #d9e2ef;
+  border-radius: 8px;
+  padding: 12px;
+  background: #f8fbff;
+}
+
+.dark .graph-insight-card {
+  background: #0f2745;
+  border-color: #35506f;
+}
+
+.graph-insight-card strong {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #0b1f3a;
+  font-size: 0.92rem;
+}
+
+.dark .graph-insight-card strong {
+  color: #e5eefb;
+}
+
+.graph-insight-card strong::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #f59e0b;
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.14);
+}
+
+.roots-card strong::before {
+  border-radius: 3px;
+  background: #10b981;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.14);
+  transform: rotate(45deg);
+}
+
+.graph-insight-card div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.graph-insight-card span {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #d9e2ef;
+  border-radius: 8px;
+  padding: 4px 8px;
+  background: white;
+  color: #31445f;
+  font-family: Consolas, Monaco, monospace;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.dark .graph-insight-card span {
+  background: #071528;
+  border-color: #35506f;
+  color: #d7e5f6;
+}
+
 .selected-points,
 .convergence-list {
   display: grid;
@@ -1039,6 +1114,19 @@ th {
   align-items: center;
 }
 
+.point-values {
+  display: grid;
+  gap: 2px;
+  color: #31445f;
+  font-family: Consolas, Monaco, monospace;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.dark .point-values {
+  color: #d7e5f6;
+}
+
 .point-card div {
   display: flex;
   flex-wrap: wrap;
@@ -1140,6 +1228,10 @@ th {
   }
 
   .point-card {
+    grid-template-columns: 1fr;
+  }
+
+  .graph-insights {
     grid-template-columns: 1fr;
   }
 

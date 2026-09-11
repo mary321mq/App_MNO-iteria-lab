@@ -1,7 +1,7 @@
 import { RotateCcw } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
 import Plotly from "plotly.js-dist-min";
-import { PointSelection } from "../types/numerical";
+import { PointSelection, ScanInterval } from "../types/numerical";
 import { formatNumber } from "../math/format";
 
 interface FunctionGraphProps {
@@ -9,8 +9,38 @@ interface FunctionGraphProps {
   f: ((x: number) => number) | null;
   range: { min: number; max: number };
   points: PointSelection[];
+  detectedIntervals: ScanInterval[];
   darkMode: boolean;
   onSelectPoint: (point: PointSelection) => void;
+}
+
+function refineRoot(f: (x: number) => number, a: number, b: number): number | null {
+  let left = a;
+  let right = b;
+  let fLeft = f(left);
+  let fRight = f(right);
+
+  if (!Number.isFinite(fLeft) || !Number.isFinite(fRight)) return null;
+  if (Math.abs(fLeft) < 1e-12) return left;
+  if (Math.abs(fRight) < 1e-12) return right;
+  if (fLeft * fRight > 0) return (left + right) / 2;
+
+  for (let index = 0; index < 42; index += 1) {
+    const mid = (left + right) / 2;
+    const fMid = f(mid);
+    if (!Number.isFinite(fMid)) return null;
+    if (Math.abs(fMid) < 1e-12) return mid;
+
+    if (fLeft * fMid <= 0) {
+      right = mid;
+      fRight = fMid;
+    } else {
+      left = mid;
+      fLeft = fMid;
+    }
+  }
+
+  return (left + right) / 2;
 }
 
 export function FunctionGraph({
@@ -18,6 +48,7 @@ export function FunctionGraph({
   f,
   range,
   points,
+  detectedIntervals,
   darkMode,
   onSelectPoint,
 }: FunctionGraphProps) {
@@ -41,6 +72,17 @@ export function FunctionGraph({
     return { x, y };
   }, [f, range.max, range.min]);
 
+  const detectedRoots = useMemo(() => {
+    if (!f) return [];
+
+    const roots = detectedIntervals
+      .map((interval) => refineRoot(f, interval.a, interval.b))
+      .filter((root): root is number => root !== null && Number.isFinite(root))
+      .sort((left, right) => left - right);
+
+    return roots.filter((root, index) => index === 0 || Math.abs(root - roots[index - 1]) > 1e-5);
+  }, [detectedIntervals, f]);
+
   useEffect(() => {
     if (!graphRef.current) return;
     const bg = darkMode ? "#071528" : "#ffffff";
@@ -54,7 +96,7 @@ export function FunctionGraph({
         type: "scatter",
         mode: "lines",
         name: "f(x)",
-        line: { color: "#1d4ed8", width: 3 },
+        line: { color: "#6366f1", width: 3 },
         hovertemplate: "x=%{x:.6f}<br>f(x)=%{y:.6f}<extra></extra>",
       },
       {
@@ -62,11 +104,29 @@ export function FunctionGraph({
         y: points.map((point) => point.y),
         type: "scatter",
         mode: "markers+text",
-        name: "Puntos",
-        marker: { color: "#38bdf8", size: 10, line: { color: "#0b1f3a", width: 1 } },
+        name: "Puntos ingresados",
+        marker: { color: "#f59e0b", size: 13, line: { color: darkMode ? "#071528" : "#ffffff", width: 2 } },
         text: points.map((_, index) => `P${index + 1}`),
         textposition: "top center",
-        hovertemplate: "x=%{x:.6f}<br>f(x)=%{y:.6f}<extra></extra>",
+        textfont: { color: "#f59e0b", size: 12 },
+        hovertemplate: "Punto ingresado<br>x=%{x:.6f}<br>f(x)=%{y:.6f}<extra></extra>",
+      },
+      {
+        x: detectedRoots,
+        y: detectedRoots.map(() => 0),
+        type: "scatter",
+        mode: "markers+text",
+        name: "Raices detectadas",
+        marker: {
+          color: "#10b981",
+          size: 14,
+          symbol: "diamond",
+          line: { color: darkMode ? "#071528" : "#ffffff", width: 2 },
+        },
+        text: detectedRoots.map((_, index) => `R${index + 1}`),
+        textposition: "bottom center",
+        textfont: { color: "#10b981", size: 12 },
+        hovertemplate: "Raiz detectada<br>x=%{x:.8f}<br>f(x)=0<extra></extra>",
       },
     ];
 
@@ -88,7 +148,13 @@ export function FunctionGraph({
         zerolinecolor: text,
         automargin: true,
       },
-      legend: { orientation: "h", x: 0, y: 1.12 },
+      legend: {
+        orientation: "h",
+        x: 0.98,
+        y: 1.14,
+        xanchor: "right",
+        font: { color: text, size: 12 },
+      },
       hovermode: "closest",
     };
 
@@ -118,7 +184,18 @@ export function FunctionGraph({
     return () => {
       graph.removeAllListeners?.("plotly_click");
     };
-  }, [darkMode, expression, f, onSelectPoint, points, range.max, range.min, samples.x, samples.y]);
+  }, [
+    darkMode,
+    detectedRoots,
+    expression,
+    f,
+    onSelectPoint,
+    points,
+    range.max,
+    range.min,
+    samples.x,
+    samples.y,
+  ]);
 
   return (
     <section className="panel graph-panel">
@@ -137,16 +214,35 @@ export function FunctionGraph({
         </button>
       </div>
       <div className="plot-shell" ref={graphRef} />
-      <div className="selected-points">
-        {points.length === 0 ? (
-          <span>No hay puntos seleccionados.</span>
-        ) : (
-          points.map((point, index) => (
-            <span key={point.id}>
-              P{index + 1}: x={formatNumber(point.x, 7)}, f(x)={formatNumber(point.y, 7)}
-            </span>
-          ))
-        )}
+      <div className="graph-insights">
+        <div className="graph-insight-card points-card">
+          <strong>Puntos ingresados</strong>
+          <div>
+            {points.length === 0 ? (
+              <span>No hay puntos seleccionados.</span>
+            ) : (
+              points.map((point, index) => (
+                <span key={point.id}>
+                  P{index + 1}: x={formatNumber(point.x, 7)}, f(x)={formatNumber(point.y, 7)}
+                </span>
+              ))
+            )}
+          </div>
+        </div>
+        <div className="graph-insight-card roots-card">
+          <strong>Raices detectadas</strong>
+          <div>
+            {detectedRoots.length === 0 ? (
+              <span>No se detectaron cruces en este rango.</span>
+            ) : (
+              detectedRoots.map((root, index) => (
+                <span key={`${root}-${index}`}>
+                  R{index + 1}: x={formatNumber(root, 10)}
+                </span>
+              ))
+            )}
+          </div>
+        </div>
       </div>
     </section>
   );

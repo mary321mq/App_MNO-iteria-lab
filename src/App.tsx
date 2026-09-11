@@ -5,6 +5,7 @@ import { IterationTable } from "./components/IterationTable";
 import { ResultCard } from "./components/ResultCard";
 import { copyResult } from "./export/clipboard";
 import { exportToExcel } from "./export/excel";
+import { formatNumber } from "./math/format";
 import { compileRealFunction } from "./math/parser";
 import { scanIntervals } from "./math/scan";
 import { analyzeFixedPoint } from "./methods/fixedPoint";
@@ -401,7 +402,10 @@ function App() {
               {selectedPoints.map((point, index) => (
                 <div key={point.id} className="point-card">
                   <strong>P{index + 1}</strong>
-                  <span>x={point.x.toFixed(5)}</span>
+                  <span className="point-values">
+                    <span>x={formatNumber(point.x, 7)}</span>
+                    <span>f(x)={formatNumber(point.y, 7)}</span>
+                  </span>
                   <div>
                     {(["a", "b", "x0", "x1", "x2"] as const).map((target) => (
                       <button key={target} type="button" onClick={() => setPoint(point, target)}>
@@ -450,6 +454,7 @@ function App() {
             f={compiled}
             range={range}
             points={selectedPoints}
+            detectedIntervals={intervals}
             darkMode={darkMode}
             onSelectPoint={onSelectPoint}
           />
