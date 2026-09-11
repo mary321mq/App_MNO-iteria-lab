@@ -974,7 +974,7 @@ label {
   transform: rotate(45deg);
 }
 
-.graph-insight-card div {
+.graph-chip-list {
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
@@ -998,6 +998,43 @@ label {
   background: #071528;
   border-color: #35506f;
   color: #d7e5f6;
+}
+
+.root-list {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.root-action-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
+  align-items: center;
+}
+
+.root-action-row button {
+  min-height: 28px;
+  border: 1px solid rgba(16, 185, 129, 0.55);
+  border-radius: 8px;
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+  padding: 4px 8px;
+  font-size: 0.78rem;
+  font-weight: 900;
+  transition:
+    transform 0.16s ease,
+    background 0.16s ease,
+    border-color 0.16s ease;
+}
+
+.root-action-row button:hover {
+  transform: translateY(-1px);
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.2);
+}
+
+.dark .root-action-row button {
+  color: #6ee7b7;
 }
 
 .selected-points,

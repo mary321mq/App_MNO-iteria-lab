@@ -12,6 +12,13 @@ interface FunctionGraphProps {
   detectedIntervals: ScanInterval[];
   darkMode: boolean;
   onSelectPoint: (point: PointSelection) => void;
+  onUseDetectedInterval: (a: number, b: number) => void;
+}
+
+interface DetectedRoot {
+  root: number;
+  a: number;
+  b: number;
 }
 
 function refineRoot(f: (x: number) => number, a: number, b: number): number | null {
@@ -51,6 +58,7 @@ export function FunctionGraph({
   detectedIntervals,
   darkMode,
   onSelectPoint,
+  onUseDetectedInterval,
 }: FunctionGraphProps) {
   const graphRef = useRef<HTMLDivElement | null>(null);
 
@@ -76,11 +84,14 @@ export function FunctionGraph({
     if (!f) return [];
 
     const roots = detectedIntervals
-      .map((interval) => refineRoot(f, interval.a, interval.b))
-      .filter((root): root is number => root !== null && Number.isFinite(root))
-      .sort((left, right) => left - right);
+      .map((interval) => {
+        const root = refineRoot(f, interval.a, interval.b);
+        return root === null || !Number.isFinite(root) ? null : { root, a: interval.a, b: interval.b };
+      })
+      .filter((item): item is DetectedRoot => item !== null)
+      .sort((left, right) => left.root - right.root);
 
-    return roots.filter((root, index) => index === 0 || Math.abs(root - roots[index - 1]) > 1e-5);
+    return roots.filter((item, index) => index === 0 || Math.abs(item.root - roots[index - 1].root) > 1e-5);
   }, [detectedIntervals, f]);
 
   useEffect(() => {
@@ -112,7 +123,7 @@ export function FunctionGraph({
         hovertemplate: "Punto ingresado<br>x=%{x:.6f}<br>f(x)=%{y:.6f}<extra></extra>",
       },
       {
-        x: detectedRoots,
+        x: detectedRoots.map((item) => item.root),
         y: detectedRoots.map(() => 0),
         type: "scatter",
         mode: "markers+text",
@@ -126,7 +137,8 @@ export function FunctionGraph({
         text: detectedRoots.map((_, index) => `R${index + 1}`),
         textposition: "bottom center",
         textfont: { color: "#10b981", size: 12 },
-        hovertemplate: "Raiz detectada<br>x=%{x:.8f}<br>f(x)=0<extra></extra>",
+        customdata: detectedRoots.map((item) => [item.a, item.b]),
+        hovertemplate: "Raiz detectada<br>x=%{x:.8f}<br>intervalo [%{customdata[0]:.5f}, %{customdata[1]:.5f}]<extra></extra>",
       },
     ];
 
@@ -166,12 +178,22 @@ export function FunctionGraph({
     });
 
     const graph = graphRef.current as HTMLElement & {
-      on?: (event: string, handler: (event: { points?: Array<{ x: number }> }) => void) => void;
+      on?: (
+        event: string,
+        handler: (event: { points?: Array<{ x: number; curveNumber?: number; pointIndex?: number }> }) => void,
+      ) => void;
       removeAllListeners?: (event: string) => void;
     };
     graph.removeAllListeners?.("plotly_click");
     graph.on?.("plotly_click", (event) => {
-      const x = event.points?.[0]?.x;
+      const selected = event.points?.[0];
+      if (selected?.curveNumber === 2 && typeof selected.pointIndex === "number") {
+        const detected = detectedRoots[selected.pointIndex];
+        if (detected) onUseDetectedInterval(detected.a, detected.b);
+        return;
+      }
+
+      const x = selected?.x;
       if (typeof x !== "number" || !f) return;
       try {
         const y = f(x);
@@ -190,6 +212,7 @@ export function FunctionGraph({
     expression,
     f,
     onSelectPoint,
+    onUseDetectedInterval,
     points,
     range.max,
     range.min,
@@ -217,7 +240,7 @@ export function FunctionGraph({
       <div className="graph-insights">
         <div className="graph-insight-card points-card">
           <strong>Puntos ingresados</strong>
-          <div>
+          <div className="graph-chip-list">
             {points.length === 0 ? (
               <span>No hay puntos seleccionados.</span>
             ) : (
@@ -231,14 +254,20 @@ export function FunctionGraph({
         </div>
         <div className="graph-insight-card roots-card">
           <strong>Raices detectadas</strong>
-          <div>
+          <div className="graph-chip-list root-list">
             {detectedRoots.length === 0 ? (
               <span>No se detectaron cruces en este rango.</span>
             ) : (
-              detectedRoots.map((root, index) => (
-                <span key={`${root}-${index}`}>
-                  R{index + 1}: x={formatNumber(root, 10)}
-                </span>
+              detectedRoots.map((item, index) => (
+                <div className="root-action-row" key={`${item.root}-${index}`}>
+                  <span>
+                    R{index + 1}: x={formatNumber(item.root, 10)} | [{formatNumber(item.a, 5)},{" "}
+                    {formatNumber(item.b, 5)}]
+                  </span>
+                  <button type="button" onClick={() => onUseDetectedInterval(item.a, item.b)}>
+                    Usar intervalo
+                  </button>
+                </div>
               ))
             )}
           </div>

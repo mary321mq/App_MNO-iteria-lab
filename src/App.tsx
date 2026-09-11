@@ -194,6 +194,16 @@ function App() {
     setConfig((current) => ({ ...current, a: Number(a.toFixed(6)), b: Number(b.toFixed(6)) }));
   };
 
+  const useDetectedInterval = (a: number, b: number) => {
+    setConfig((current) => ({
+      ...current,
+      method: current.method === "false-position" ? current.method : "bisection",
+      a: Number(a.toFixed(6)),
+      b: Number(b.toFixed(6)),
+    }));
+    setMessage(`Intervalo detectado enviado a a y b: [${formatNumber(a, 6)}, ${formatNumber(b, 6)}].`);
+  };
+
   const negativeIntervals = intervals.filter((item) => item.kind === "negative");
   const positiveIntervals = intervals.filter((item) => item.kind === "positive");
 
@@ -457,6 +467,7 @@ function App() {
             detectedIntervals={intervals}
             darkMode={darkMode}
             onSelectPoint={onSelectPoint}
+            onUseDetectedInterval={useDetectedInterval}
           />
           <ResultCard result={result} />
           <IterationTable
