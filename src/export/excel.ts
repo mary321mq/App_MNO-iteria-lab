@@ -1,7 +1,8 @@
-import * as XLSX from "xlsx";
+import * as XLSX from "xlsx-js-style";
 import { SolveResult } from "../types/numerical";
 
 type StyledCell = XLSX.CellObject & { s?: Record<string, unknown> };
+type SheetTheme = "title" | "section" | "header" | "label" | "value" | "zebra" | "result";
 
 const statusLabels: Record<string, string> = {
   converged: "Convergio",
@@ -33,6 +34,11 @@ const configLabels: Record<string, string> = {
 
 const iterationLabels: Record<string, string> = {
   it: "Iteracion",
+  a: "a",
+  b: "b",
+  x0: "x0",
+  x1: "x1",
+  x2: "x2",
   aprox: "Aproximacion",
   "f(aprox)": "f(aprox)",
   dif: "Diferencia",
@@ -40,17 +46,77 @@ const iterationLabels: Record<string, string> = {
   criterio: "Criterio",
 };
 
+const border = {
+  top: { style: "thin", color: { rgb: "B7C7DC" } },
+  bottom: { style: "thin", color: { rgb: "B7C7DC" } },
+  left: { style: "thin", color: { rgb: "B7C7DC" } },
+  right: { style: "thin", color: { rgb: "B7C7DC" } },
+};
+
+function style(theme: SheetTheme): StyledCell["s"] {
+  const base = {
+    border,
+    alignment: { vertical: "center", wrapText: true },
+    font: { name: "Calibri", sz: 11, color: { rgb: "0B1F3A" } },
+  };
+
+  const themes: Record<SheetTheme, StyledCell["s"]> = {
+    title: {
+      ...base,
+      font: { name: "Calibri", sz: 18, bold: true, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: "0B1F3A" } },
+      alignment: { horizontal: "center", vertical: "center" },
+    },
+    section: {
+      ...base,
+      font: { name: "Calibri", sz: 12, bold: true, color: { rgb: "0B1F3A" } },
+      fill: { fgColor: { rgb: "DBEAFE" } },
+      alignment: { horizontal: "center", vertical: "center" },
+    },
+    header: {
+      ...base,
+      font: { name: "Calibri", sz: 11, bold: true, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: "1D4ED8" } },
+      alignment: { horizontal: "center", vertical: "center", wrapText: true },
+    },
+    label: {
+      ...base,
+      font: { name: "Calibri", sz: 11, bold: true, color: { rgb: "0B1F3A" } },
+      fill: { fgColor: { rgb: "EFF6FF" } },
+    },
+    value: {
+      ...base,
+      alignment: { horizontal: "center", vertical: "center", wrapText: true },
+    },
+    zebra: {
+      ...base,
+      fill: { fgColor: { rgb: "F8FBFF" } },
+      alignment: { horizontal: "center", vertical: "center", wrapText: true },
+    },
+    result: {
+      ...base,
+      font: { name: "Calibri", sz: 12, bold: true, color: { rgb: "0B1F3A" } },
+      fill: { fgColor: { rgb: "BAE6FD" } },
+      alignment: { horizontal: "center", vertical: "center", wrapText: true },
+    },
+  };
+
+  return themes[theme];
+}
+
 function autoFit(sheet: XLSX.WorkSheet): void {
   const range = XLSX.utils.decode_range(sheet["!ref"] || "A1:A1");
   const cols = [];
+
   for (let c = range.s.c; c <= range.e.c; c += 1) {
     let width = 14;
     for (let r = range.s.r; r <= range.e.r; r += 1) {
-      const cell = sheet[XLSX.utils.encode_cell({ r, c })];
-      if (cell?.v !== undefined) width = Math.max(width, String(cell.v).length + 2);
+      const current = sheet[XLSX.utils.encode_cell({ r, c })];
+      if (current?.v !== undefined) width = Math.max(width, String(current.v).length + 2);
     }
-    cols.push({ wch: Math.min(width, 42) });
+    cols.push({ wch: Math.min(width, 44) });
   }
+
   sheet["!cols"] = cols;
 }
 
@@ -58,28 +124,30 @@ function cell(sheet: XLSX.WorkSheet, address: string): StyledCell | undefined {
   return sheet[address] as StyledCell | undefined;
 }
 
-function paintCell(sheet: XLSX.WorkSheet, address: string, style: StyledCell["s"]): void {
+function paintCell(sheet: XLSX.WorkSheet, address: string, cellStyle: StyledCell["s"]): void {
   const current = cell(sheet, address);
   if (!current) return;
-  current.s = { ...(current.s || {}), ...style };
+  current.s = { ...(current.s || {}), ...cellStyle };
 }
 
-function paintRange(sheet: XLSX.WorkSheet, rangeAddress: string, style: StyledCell["s"]): void {
+function paintRange(sheet: XLSX.WorkSheet, rangeAddress: string, cellStyle: StyledCell["s"]): void {
   const range = XLSX.utils.decode_range(rangeAddress);
+
   for (let r = range.s.r; r <= range.e.r; r += 1) {
     for (let c = range.s.c; c <= range.e.c; c += 1) {
-      paintCell(sheet, XLSX.utils.encode_cell({ r, c }), style);
+      paintCell(sheet, XLSX.utils.encode_cell({ r, c }), cellStyle);
     }
   }
 }
 
-function formatNumbers(sheet: XLSX.WorkSheet): void {
+function formatSheetNumbers(sheet: XLSX.WorkSheet, percentColumns: number[] = []): void {
   const range = XLSX.utils.decode_range(sheet["!ref"] || "A1:A1");
+
   for (let r = range.s.r; r <= range.e.r; r += 1) {
     for (let c = range.s.c; c <= range.e.c; c += 1) {
       const current = cell(sheet, XLSX.utils.encode_cell({ r, c }));
-      if (!current) continue;
-      if (current.t === "n") current.z = "0.0000000000";
+      if (!current || current.t !== "n") continue;
+      current.z = percentColumns.includes(c) ? "0.00000000%" : "0.0000000000";
     }
   }
 }
@@ -98,51 +166,118 @@ function parseExcelValue(key: string, value: string | number): string | number {
   return trimmed !== "" && Number.isFinite(numeric) ? numeric : value;
 }
 
+function buildSummarySheet(result: SolveResult, criterionLabel: string, date: Date): XLSX.WorkSheet {
+  const rows = [
+    ["MaryLab - Reporte de metodo numerico", "", "", ""],
+    [],
+    ["Resumen del ejercicio", "", "", ""],
+    ["Metodo", result.methodName, "Estado", statusLabels[result.status] || result.status],
+    ["Funcion", result.expression, "Fecha", date.toLocaleString()],
+    ["Datos iniciales", result.initialData, "Iteraciones", result.iterations.length],
+    ["Criterio de parada", criterionLabel, "Tolerancia", result.tolerance],
+    [],
+    ["Resultado final", result.roots.join(", "), "f(x) final", parseExcelValue("finalFx", result.finalFx)],
+    ["Error", parseExcelValue("Ea", result.finalError), "", ""],
+    [],
+    ["Interpretacion", result.explanation, "", ""],
+  ];
+  const sheet = XLSX.utils.aoa_to_sheet(rows);
+
+  sheet["!merges"] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },
+    { s: { r: 2, c: 0 }, e: { r: 2, c: 3 } },
+    { s: { r: 11, c: 1 }, e: { r: 11, c: 3 } },
+  ];
+  sheet["!rows"] = [{ hpt: 28 }, { hpt: 8 }, { hpt: 22 }, ...Array(9).fill({ hpt: 24 })];
+
+  paintRange(sheet, "A1:D1", style("title"));
+  paintRange(sheet, "A3:D3", style("section"));
+  paintRange(sheet, "A4:A10", style("label"));
+  paintRange(sheet, "C4:C10", style("label"));
+  paintRange(sheet, "B4:B10", style("value"));
+  paintRange(sheet, "D4:D10", style("value"));
+  paintRange(sheet, "A9:D10", style("result"));
+  paintRange(sheet, "A12:D12", style("value"));
+  paintCell(sheet, "A12", style("label"));
+  formatSheetNumbers(sheet, [1]);
+  autoFit(sheet);
+
+  return sheet;
+}
+
 function buildIterationSheet(result: SolveResult): XLSX.WorkSheet {
   if (!result.iterations.length) return XLSX.utils.aoa_to_sheet([["Sin iteraciones para mostrar"]]);
 
   const keys = Object.keys(result.iterations[0]);
+  const headerRow = 3;
   const rows = [
+    ["Tabla de iteraciones", "", "", "", "", "", "", ""],
+    [`Metodo: ${result.methodName}`, `Funcion: ${result.expression}`, "", "", "", "", "", ""],
+    [],
     keys.map((key) => iterationLabels[key] || key),
     ...result.iterations.map((row) => keys.map((key) => parseExcelValue(key, row[key]))),
   ];
   const sheet = XLSX.utils.aoa_to_sheet(rows);
-  sheet["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 0, c: keys.length - 1 } }) };
+  const lastColumn = Math.max(keys.length - 1, 0);
+  const lastRow = result.iterations.length + headerRow;
+  const percentColumns = keys.reduce<number[]>((columns, key, index) => {
+    if (key === "Ea") columns.push(index);
+    return columns;
+  }, []);
+
+  sheet["!merges"] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: lastColumn } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: lastColumn } },
+  ];
+  sheet["!autofilter"] = {
+    ref: XLSX.utils.encode_range({ s: { r: headerRow, c: 0 }, e: { r: lastRow, c: lastColumn } }),
+  };
+  sheet["!rows"] = [
+    { hpt: 28 },
+    { hpt: 22 },
+    { hpt: 8 },
+    { hpt: 24 },
+    ...result.iterations.map(() => ({ hpt: 21 })),
+  ];
+
+  paintRange(sheet, XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 0, c: lastColumn } }), style("title"));
+  paintRange(sheet, XLSX.utils.encode_range({ s: { r: 1, c: 0 }, e: { r: 1, c: lastColumn } }), style("section"));
+  paintRange(sheet, XLSX.utils.encode_range({ s: { r: headerRow, c: 0 }, e: { r: headerRow, c: lastColumn } }), style("header"));
+
+  for (let r = headerRow + 1; r <= lastRow; r += 1) {
+    const rowStyle = (r - headerRow) % 2 === 0 ? style("zebra") : style("value");
+    paintRange(sheet, XLSX.utils.encode_range({ s: { r, c: 0 }, e: { r, c: lastColumn } }), rowStyle);
+  }
+
+  formatSheetNumbers(sheet, percentColumns);
   autoFit(sheet);
-  formatNumbers(sheet);
-  keys.forEach((key, index) => {
-    if (key === "Ea") {
-      for (let row = 1; row <= result.iterations.length; row += 1) {
-        const current = cell(sheet, XLSX.utils.encode_cell({ r: row, c: index }));
-        if (current?.t === "n") current.z = "0.00000000%";
-      }
-    }
-  });
-  paintRange(sheet, XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 0, c: keys.length - 1 } }), headerStyle());
+
   return sheet;
 }
 
-function headerStyle(): StyledCell["s"] {
-  return {
-    font: { bold: true, color: { rgb: "FFFFFF" } },
-    fill: { fgColor: { rgb: "1D4ED8" } },
-    alignment: { horizontal: "center", vertical: "center" },
-  };
-}
+function buildConfigSheet(result: SolveResult, graphRange: { min: number; max: number }): XLSX.WorkSheet {
+  const configRows = Object.entries(result.configSnapshot).map(([key, value]) => [
+    configLabels[key] || key,
+    parseExcelValue(key, value),
+  ]);
+  const rows = [
+    ["Configuracion usada", ""],
+    ["Rango X minimo", graphRange.min],
+    ["Rango X maximo", graphRange.max],
+    ...configRows,
+  ];
+  const sheet = XLSX.utils.aoa_to_sheet(rows);
+  const lastRow = rows.length;
 
-function titleStyle(): StyledCell["s"] {
-  return {
-    font: { bold: true, color: { rgb: "FFFFFF" }, sz: 18 },
-    fill: { fgColor: { rgb: "0B1F3A" } },
-    alignment: { horizontal: "center", vertical: "center" },
-  };
-}
+  sheet["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }];
+  sheet["!rows"] = [{ hpt: 26 }, ...Array(lastRow - 1).fill({ hpt: 22 })];
+  paintRange(sheet, "A1:B1", style("title"));
+  paintRange(sheet, `A2:A${lastRow}`, style("label"));
+  paintRange(sheet, `B2:B${lastRow}`, style("value"));
+  formatSheetNumbers(sheet);
+  autoFit(sheet);
 
-function sectionStyle(): StyledCell["s"] {
-  return {
-    font: { bold: true, color: { rgb: "0B1F3A" } },
-    fill: { fgColor: { rgb: "DBEAFE" } },
-  };
+  return sheet;
 }
 
 export function exportToExcel(result: SolveResult, graphRange: { min: number; max: number }): void {
@@ -151,62 +286,9 @@ export function exportToExcel(result: SolveResult, graphRange: { min: number; ma
   const criterion = String(result.configSnapshot.criterio || result.configSnapshot.stopCriterion || "teacher");
   const criterionLabel = stopCriterionLabels[criterion] || criterion;
 
-  const summary = XLSX.utils.aoa_to_sheet([
-    ["MaryLab - Reporte de metodo numerico", "", "", ""],
-    [],
-    ["Resumen del ejercicio", ""],
-    ["Metodo", result.methodName],
-    ["Funcion", result.expression],
-    ["Datos iniciales", result.initialData],
-    ["Criterio de parada", criterionLabel],
-    ["Tolerancia", result.tolerance],
-    ["Resultado final", result.roots.join(", ")],
-    ["f(x) final", result.finalFx],
-    ["Error", result.finalError],
-    ["Iteraciones", result.iterations.length],
-    ["Estado", statusLabels[result.status] || result.status],
-    ["Fecha", date.toLocaleString()],
-    [],
-    ["Interpretacion", result.explanation],
-  ]);
-  summary["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } }];
-  paintRange(summary, "A1:D1", titleStyle());
-  paintRange(summary, "A3:D3", sectionStyle());
-  paintRange(summary, "A4:A13", { font: { bold: true } });
-  autoFit(summary);
-  formatNumbers(summary);
-  XLSX.utils.book_append_sheet(wb, summary, "Resumen");
-
+  XLSX.utils.book_append_sheet(wb, buildSummarySheet(result, criterionLabel, date), "Resumen");
   XLSX.utils.book_append_sheet(wb, buildIterationSheet(result), "Iteraciones");
-
-  const configRows = Object.entries(result.configSnapshot).map(([key, value]) => [
-    configLabels[key] || key,
-    parseExcelValue(key, value),
-  ]);
-  const configuration = XLSX.utils.aoa_to_sheet([
-    ["Configuracion usada", ""],
-    ["Rango X minimo", graphRange.min],
-    ["Rango X maximo", graphRange.max],
-    ...configRows,
-  ]);
-  paintRange(configuration, "A1:B1", sectionStyle());
-  paintRange(configuration, `A2:A${configRows.length + 3}`, { font: { bold: true } });
-  autoFit(configuration);
-  formatNumbers(configuration);
-  XLSX.utils.book_append_sheet(wb, configuration, "Configuracion");
-
-  const guide = XLSX.utils.aoa_to_sheet([
-    ["Guia rapida", ""],
-    ["Criterio recomendado por el metodo", "Antes aparecia como teacher. Es la opcion automatica recomendada."],
-    ["Biseccion", "Se detiene cuando el intervalo ya es suficientemente pequeno."],
-    ["Regla falsa", "Se detiene cuando el valor absoluto de f(x) es suficientemente pequeno."],
-    ["Newton, secante y punto fijo", "Se detienen cuando el cambio entre aproximaciones es pequeno."],
-    ["Error aproximado porcentual", "Compara la aproximacion nueva con la anterior y lo muestra como porcentaje."],
-  ]);
-  paintRange(guide, "A1:B1", titleStyle());
-  paintRange(guide, "A2:A6", { font: { bold: true } });
-  autoFit(guide);
-  XLSX.utils.book_append_sheet(wb, guide, "Guia");
+  XLSX.utils.book_append_sheet(wb, buildConfigSheet(result, graphRange), "Configuracion");
 
   wb.Props = {
     Title: "MaryLab - Reporte de metodo numerico",
