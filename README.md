@@ -1,7 +1,9 @@
 # NumiLab
 
 <p align="center">
-  <img src="public/anime-math-guide.png" alt="NumiLab - guia anime de metodos numericos" width="420">
+  <img src="public/d.png" alt="NumiLab - estudiante anime de metodos numericos" width="155">
+  &nbsp;&nbsp;&nbsp;
+  <img src="public/anime-math-guide.png" alt="NumiLab - dragon guia de metodos numericos" width="135">
 </p>
 
 <p align="center">
