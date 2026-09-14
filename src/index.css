@@ -162,10 +162,13 @@ button:disabled {
 
 .topbar {
   display: grid;
-  grid-template-columns: minmax(150px, 250px) minmax(280px, 1fr) auto;
+  grid-template-columns: minmax(170px, 270px) minmax(280px, 1fr) minmax(170px, 270px);
+  grid-template-areas:
+    "main-logo brand dragon"
+    ". theme .";
   align-items: center;
-  gap: 18px;
-  min-height: 166px;
+  gap: 12px 22px;
+  min-height: 214px;
   margin-bottom: 20px;
   padding: 18px;
   border: 1px solid rgba(183, 199, 220, 0.65);
@@ -223,6 +226,7 @@ p {
 }
 
 .brand-centered {
+  grid-area: brand;
   min-width: 0;
   display: grid;
   justify-items: center;
@@ -269,6 +273,7 @@ p {
 }
 
 .anime-hero {
+  grid-area: main-logo;
   align-self: center;
   display: flex;
   align-items: flex-end;
@@ -300,6 +305,27 @@ p {
   z-index: 1;
 }
 
+.logo-main img {
+  max-height: 188px;
+}
+
+.dragon-hero {
+  grid-area: dragon;
+  min-width: 150px;
+  min-height: 142px;
+}
+
+.dragon-hero::before {
+  inset: 14px 10px 10px;
+  transform: rotate(2deg);
+}
+
+.dragon-hero img {
+  max-height: 188px;
+  filter: drop-shadow(0 16px 22px rgba(56, 189, 248, 0.26));
+  animation: dragonFloat 3.9s ease-in-out infinite;
+}
+
 .formula-ribbon {
   position: absolute;
   top: 12px;
@@ -329,6 +355,17 @@ p {
 
   50% {
     transform: translateY(-7px);
+  }
+}
+
+@keyframes dragonFloat {
+  0%,
+  100% {
+    transform: scaleX(-1) translateY(0);
+  }
+
+  50% {
+    transform: scaleX(-1) translateY(-7px);
   }
 }
 
@@ -383,6 +420,12 @@ p {
     transform 0.16s ease,
     box-shadow 0.16s ease,
     background 0.16s ease;
+}
+
+.theme-toggle {
+  grid-area: theme;
+  justify-self: center;
+  z-index: 2;
 }
 
 .theme-toggle:hover,
@@ -1215,11 +1258,15 @@ th {
   }
 
   .topbar {
-    grid-template-columns: minmax(130px, 200px) minmax(0, 1fr) auto;
+    grid-template-columns: minmax(130px, 200px) minmax(0, 1fr) minmax(130px, 200px);
   }
 
   .anime-hero {
     width: 100%;
+  }
+
+  .dragon-hero img {
+    max-height: 142px;
   }
 
   .plot-shell {
@@ -1239,7 +1286,11 @@ th {
   }
 
   .topbar {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "main-logo dragon"
+      "brand brand"
+      "theme theme";
     justify-items: stretch;
   }
 
@@ -1249,8 +1300,24 @@ th {
 
   .anime-hero {
     align-self: center;
-    width: min(100%, 260px);
+    width: 100%;
     min-height: 126px;
+  }
+
+  .logo-main img {
+    max-height: 132px;
+  }
+
+  .dragon-hero {
+    min-height: 112px;
+  }
+
+  .dragon-hero img {
+    max-height: 132px;
+  }
+
+  .theme-toggle {
+    justify-self: stretch;
   }
 
   .brand-mark {

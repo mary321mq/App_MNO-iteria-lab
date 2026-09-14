@@ -212,7 +212,7 @@ function App() {
       <main className="splash-screen">
         <section className="splash-card" aria-label="Bienvenida a NumiLab">
           <div className="splash-image">
-            <img src="/anime-math-guide.png" alt="" />
+            <img src="/d.png" alt="" />
           </div>
           <div className="splash-copy">
             <span>Laboratorio de convergencia</span>
@@ -231,14 +231,17 @@ function App() {
   return (
     <main className="app-shell">
       <header className="topbar">
-        <div className="anime-hero" aria-hidden="true">
-          <img src="/anime-math-guide.png" alt="" />
+        <div className="anime-hero logo-main" aria-hidden="true">
+          <img src="/d.png" alt="" />
         </div>
         <div className="brand-block brand-centered">
           <span className="eyebrow">Laboratorio de convergencia</span>
           <h1>NumiLab</h1>
           <p className="lead-line">Raices numericas, paso a paso.</p>
           <p>Explora funciones, encuentra raices y sigue cada iteracion hasta la solucion.</p>
+        </div>
+        <div className="anime-hero dragon-hero" aria-hidden="true">
+          <img src="/anime-math-guide.png" alt="" />
         </div>
         <button className="theme-toggle" type="button" onClick={() => setDarkMode((value) => !value)}>
           {darkMode ? <Sun size={18} /> : <Moon size={18} />}
